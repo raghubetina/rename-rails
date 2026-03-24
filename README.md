@@ -1,8 +1,8 @@
 # Rename
 
-This gem allows you to rename your Rails application by using a single command.
+This gem renames a Rails application with a single command.
 
-Tested up to Ruby 3.4.5 and Rails 8.0.2
+Tested up to Ruby 4.0.1 and Rails 8.1.2.1.
 
 ## Installation
 
@@ -51,7 +51,11 @@ Search and replace exact module name to...
   README.mdown
   README.mkdn
   Dockerfile (if present)
-Search and replace underscore seperated module name to...
+Search and replace humanized app name in...
+  README.*
+  app/views/layouts/application.html.*
+Search and replace underscore separated app name in...
+  .env*
   config/initializers/session_store.rb (if present)
   config/database.yml
   config/database.yml (Rails 8 multi-db: cache, queue, cable)
@@ -60,6 +64,7 @@ Search and replace underscore seperated module name to...
   config/environments/production.rb
   config/deploy.yml (Rails 8 Kamal service names)
   package.json
+  yarn.lock
 Removing references...
   .idea
 Renaming directory...

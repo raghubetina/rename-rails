@@ -1,3 +1,10 @@
-require 'rubygems'
-require 'test/unit'
-require 'active_support'
+require "bundler/setup"
+require "fileutils"
+require "minitest/autorun"
+require "pathname"
+require "rails"
+require "rails/generators"
+require "tmpdir"
+
+require_relative "../lib/rename"
+require_relative "../lib/generators/rename/into/into_generator"

@@ -1,3 +1,3 @@
 module Rename
-  autoload :VERSION, 'active_admin/version'
+  autoload :VERSION, "rename/version"
 end

@@ -7,7 +7,7 @@ Gem::Specification.new do |gem|
   gem.license  = 'MIT'
   gem.authors  = ['Morshed Alam']
   gem.email    = %w(morshed201@gmail.com)
-  gem.homepage = 'https://github.com/morshedalam/rename'
+  gem.homepage = 'https://github.com/raghubetina/rename-rails'
   gem.summary  = 'Rename your Rails application using a single command.'
   gem.required_ruby_version = ">= 1.8.7"
 

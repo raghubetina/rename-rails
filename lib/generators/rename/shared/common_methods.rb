@@ -31,9 +31,13 @@ module CommonMethods
     @old_module_name = app_parent
     @old_dir         = File.basename(Dir.getwd)
     @old_app_name    = detect_app_name || @old_module_name.underscore
+    @old_display_name = @old_module_name.to_s.titleize
+    @old_package_name = detect_package_name || @old_app_name.dasherize
 
     @new_app_name    = new_name.parameterize(separator: '_').gsub('-', '_')
     @new_module_name = @new_app_name.camelize
+    @new_display_name = @new_module_name.titleize
+    @new_package_name = new_name.parameterize
     @new_key         = @new_app_name
     @new_dir         = new_name.gsub(/[&%*@()!{}\[\]'\\\/"]+/, '')
     @new_path        = Rails.root.to_s.split('/')[0...-1].push(@new_dir).join('/')
@@ -60,49 +64,51 @@ module CommonMethods
     in_root do
       puts 'Search and replace exact module name...'
       Dir['*', 'config/**/**/*.{rb,yml}', '.{rvmrc}', 'app/views/pwa/*.json.erb'].each do |file|
-        replace_into_file(file, /#{@old_module_name}/, @new_module_name)
+        replace_into_file(file, /#{Regexp.escape(@old_module_name)}/, @new_module_name)
       end
       #Application layout
       %w(erb haml slim).each do |ext|
-        replace_into_file("app/views/layouts/application.html.#{ext}", /#{@old_module_name}/, @new_module_name)
-        replace_into_file("app/views/layouts/application.html.#{ext}", /#{@old_module_name.underscore.humanize}/, @new_module_name.underscore.humanize)
+        replace_into_file("app/views/layouts/application.html.#{ext}", /#{Regexp.escape(@old_module_name)}/, @new_module_name)
+        replace_into_file("app/views/layouts/application.html.#{ext}", /#{Regexp.escape(@old_display_name)}/, @new_display_name)
       end
       #Readme
       %w(md markdown mdown mkdn).each do |ext|
-        replace_into_file("README.#{ext}", /#{@old_module_name}/, @new_module_name)
+        replace_into_file("README.#{ext}", /#{Regexp.escape(@old_module_name)}/, @new_module_name)
+        replace_into_file("README.#{ext}", /#{Regexp.escape(@old_display_name)}/, @new_display_name)
+      end
+      # Hidden env files
+      Dir['.env*'].each do |file|
+        replace_into_file(file, /#{Regexp.escape(@old_app_name)}/, @new_app_name)
       end
 
       puts 'Search and replace underscore separated module name in files...'
       #session key
       safe_replace_into_file('config/initializers/session_store.rb', /(('|")_.*_session('|"))/i, "'_#{@new_key}_session'")
       #database
-      replace_into_file('config/database.yml', /#{@old_app_name}/i, @new_app_name)
-      replace_into_file('config/database.yml', /#{@old_app_name}_(production|development|test)(_cache|_queue|_cable)?/, "#{@new_app_name}_\\1\\2")
-      replace_into_file('config/database.yml', /#{@old_app_name.upcase}_DATABASE_PASSWORD/, "#{@new_app_name.upcase}_DATABASE_PASSWORD")
+      replace_into_file('config/database.yml', /#{Regexp.escape(@old_app_name.upcase)}_DATABASE_PASSWORD/, "#{@new_app_name.upcase}_DATABASE_PASSWORD")
+      replace_into_file('config/database.yml', /#{Regexp.escape(@old_app_name)}/, @new_app_name)
       #Channel and job queue
       %w(config/cable.yml config/environments/production.rb).each do |file|
-        replace_into_file(file, /#{@old_app_name}_production/, "#{@new_app_name}_production")
+        replace_into_file(file, /#{Regexp.escape(@old_app_name)}_production/, "#{@new_app_name}_production")
       end
-      # package.json name entry
-      old_package_name_regex = /\Wname\W *: *\W(?<name>[-_\p{Alnum}]+)\W *, */i
-      new_package_name       = %("name":"#{@new_app_name}",)
-      replace_into_file('package.json', old_package_name_regex, new_package_name)
-
+      # package.json and yarn lock workspace entry
+      safe_replace_into_file('package.json', /"name"\s*:\s*"#{Regexp.escape(@old_package_name)}"/, %("name":"#{@new_package_name}"))
+      safe_replace_into_file('yarn.lock', /#{Regexp.escape(@old_package_name)}@workspace:\./, "#{@new_package_name}@workspace:.")
 
       # Rails 8 specific files
       # Kamal deployment configuration
-      safe_replace_into_file('config/deploy.yml', /service: #{@old_app_name}/, "service: #{@new_app_name}")
-      safe_replace_into_file('config/deploy.yml', /image: (.+)\/#{@old_app_name}/, "image: \\1/#{@new_app_name}")
-      safe_replace_into_file('config/deploy.yml', /"#{@old_app_name}_/, "\"#{@new_app_name}_")
-      safe_replace_into_file('config/deploy.yml', /#{@old_app_name}-db/, "#{@new_app_name}-db")
+      safe_replace_into_file('config/deploy.yml', /service: #{Regexp.escape(@old_app_name)}/, "service: #{@new_app_name}")
+      safe_replace_into_file('config/deploy.yml', /image: (.+)\/#{Regexp.escape(@old_app_name)}/, "image: \\1/#{@new_app_name}")
+      safe_replace_into_file('config/deploy.yml', /"#{Regexp.escape(@old_app_name)}_/, "\"#{@new_app_name}_")
+      safe_replace_into_file('config/deploy.yml', /#{Regexp.escape(@old_app_name)}-db/, "#{@new_app_name}-db")
 
       # PWA manifest
-      safe_replace_into_file('app/views/pwa/manifest.json.erb', /"name": "#{@old_module_name}"/, "\"name\": \"#{@new_module_name}\"")
-      safe_replace_into_file('app/views/pwa/manifest.json.erb', /"description": "#{@old_module_name}/, "\"description\": \"#{@new_module_name}")
+      safe_replace_into_file('app/views/pwa/manifest.json.erb', /"name": "#{Regexp.escape(@old_module_name)}"/, "\"name\": \"#{@new_module_name}\"")
+      safe_replace_into_file('app/views/pwa/manifest.json.erb', /"description": "#{Regexp.escape(@old_module_name)}/, "\"description\": \"#{@new_module_name}")
 
       # Dockerfile
-      safe_replace_into_file('Dockerfile', /#{@old_module_name}/, @new_module_name)
-      safe_replace_into_file('Dockerfile', /#{@old_app_name}/, @new_app_name)
+      safe_replace_into_file('Dockerfile', /#{Regexp.escape(@old_module_name)}/, @new_module_name)
+      safe_replace_into_file('Dockerfile', /#{Regexp.escape(@old_app_name)}/, @new_app_name)
     end
   end
 
@@ -126,6 +132,16 @@ module CommonMethods
     end
 
     nil
+  end
+
+  def detect_package_name
+    return nil unless file_exist?('package.json')
+
+    package_content = File.read('package.json')
+
+    if match = package_content.match(/"name"\s*:\s*"(?<name>[-_\p{Alnum}]+)"/)
+      match[:name]
+    end
   end
 
   def file_exist?(name)
